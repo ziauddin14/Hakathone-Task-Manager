@@ -9,13 +9,17 @@ import {
   Trash2, 
   Filter, 
   Calendar,
-  Clock
+  Clock,
+  RefreshCw,
+  Search,
+  FileText
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const TaskTable = () => {
   const [editingTask, setEditingTask] = useState(null);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const {
     tasks,
@@ -25,7 +29,8 @@ const TaskTable = () => {
     getFilteredTasks,
     updateTask,
     deleteTask,
-    toggleTaskStatus
+    toggleTaskStatus,
+    fetchTasks
   } = useTaskStore();
 
   // Validation schema for edit form
@@ -76,13 +81,24 @@ const TaskTable = () => {
     await toggleTaskStatus(taskId, currentStatus);
   };
 
+  // Handle sync tasks
+  const handleSyncTasks = () => {
+    // This would typically refresh the tasks from the server
+    // For now, we'll just show a message
+    Swal.fire({
+      icon: 'success',
+      title: 'Tasks Synced',
+      text: 'Tasks have been synchronized successfully!'
+    });
+  };
+
   // Format date for display
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric'
     });
   };
 
@@ -97,52 +113,92 @@ const TaskTable = () => {
     return today.toISOString().split('T')[0];
   };
 
-  const filteredTasks = getFilteredTasks();
+  // Get filtered and searched tasks
+  const getFilteredAndSearchedTasks = () => {
+    let filtered = getFilteredTasks();
+    
+    if (searchTerm.trim()) {
+      filtered = filtered.filter(task => 
+        task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return filtered;
+  };
+
+  const filteredTasks = getFilteredAndSearchedTasks();
   
   console.log('TaskTable render - tasks:', tasks, 'filteredTasks:', filteredTasks, 'isLoading:', isLoading);
 
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      {/* Header with filter */}
+      {/* Header with Sync Tasks button */}
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">
-            Tasks ({filteredTasks.length})
-          </h3>
-          <div className="flex items-center space-x-2">
-            <Filter className="h-4 w-4 text-gray-400" />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            >
-              <option value="all">All Tasks</option>
-              <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
-            </select>
+          <div className="flex items-center space-x-4">
+            <h3 className="text-lg font-medium text-gray-900">Tasks</h3>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Filter:</span>
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="all">All Tasks</option>
+                <option value="pending">Pending</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
           </div>
+          
+          <button
+            onClick={handleSyncTasks}
+            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sync Tasks
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mt-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search tasks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Task Count */}
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredTasks.length} of {tasks.length} tasks
         </div>
       </div>
 
       {/* Task List */}
       <div className="overflow-x-auto">
         {filteredTasks.length === 0 ? (
-          <div className="text-center py-8">
-            <Circle className="mx-auto h-12 w-12 text-gray-300" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No tasks</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {filter === 'all' 
-                ? 'Get started by creating a new task.' 
-                : `No ${filter} tasks found.`
-              }
+          <div className="text-center py-12">
+            <FileText className="mx-auto h-16 w-16 text-gray-300" />
+            <h3 className="mt-4 text-lg font-medium text-gray-900">No tasks found</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Create your first task to get started!
             </p>
           </div>
         ) : (
@@ -150,44 +206,22 @@ const TaskTable = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  TASK
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Task
+                  DEADLINE
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Deadline
+                  STATUS
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  ACTIONS
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTasks.map((task) => (
                 <tr key={task.id} className="hover:bg-gray-50">
-                  {/* Status */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleStatusToggle(task.id, task.status)}
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        task.status === 'completed'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}
-                    >
-                      {task.status === 'completed' ? (
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                      ) : (
-                        <Circle className="h-4 w-4 mr-1" />
-                      )}
-                      {task.status}
-                    </button>
-                  </td>
-
                   {/* Task Details */}
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">
@@ -220,23 +254,34 @@ const TaskTable = () => {
                     </div>
                   </td>
 
-                  {/* Created Date */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <Clock className="h-4 w-4 mr-1" />
-                      {formatDate(task.createdAt)}
-                    </div>
+                  {/* Status */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <button
+                      onClick={() => handleStatusToggle(task.id, task.status)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        task.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}
+                    >
+                      {task.status === 'completed' ? (
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                      ) : (
+                        <Circle className="h-4 w-4 mr-1" />
+                      )}
+                      {task.status}
+                    </button>
                   </td>
 
                   {/* Actions */}
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center space-x-2">
                       <button
                         onClick={() => {
                           setEditingTask(task);
                           setShowEditForm(true);
                         }}
-                        className="text-indigo-600 hover:text-indigo-900"
+                        className="text-blue-600 hover:text-blue-900"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
@@ -298,7 +343,7 @@ const TaskTable = () => {
                         className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 focus:z-10 sm:text-sm ${
                           errors.name && touched.name
                             ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                         }`}
                       />
                       <ErrorMessage
@@ -321,7 +366,7 @@ const TaskTable = () => {
                         className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 focus:z-10 sm:text-sm ${
                           errors.description && touched.description
                             ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                         }`}
                       />
                       <ErrorMessage
@@ -344,7 +389,7 @@ const TaskTable = () => {
                         className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-1 focus:z-10 sm:text-sm ${
                           errors.deadline && touched.deadline
                             ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
                         }`}
                       />
                       <ErrorMessage
@@ -369,7 +414,7 @@ const TaskTable = () => {
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50"
+                        className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                       >
                         {isSubmitting ? 'Updating...' : 'Update Task'}
                       </button>

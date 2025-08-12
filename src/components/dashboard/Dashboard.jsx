@@ -6,12 +6,12 @@ import useAuthStore from '../../store/authStore';
 import useTaskStore from '../../store/taskStore';
 import AddTaskForm from './AddTaskForm';
 import TaskTable from './TaskTable';
-import { LogOut, User, CheckCircle } from 'lucide-react';
+import { LogOut, User, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { fetchTasks } = useTaskStore();
+  const { fetchTasks, tasks } = useTaskStore();
 
   useEffect(() => {
     // Check if user is authenticated
@@ -49,6 +49,16 @@ const Dashboard = () => {
     return null;
   }
 
+  // Calculate task statistics
+  const totalTasks = tasks.length;
+  const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+  const completedTasks = tasks.filter(task => task.status === 'completed').length;
+  const overdueTasks = tasks.filter(task => {
+    const deadline = new Date(task.deadline);
+    const today = new Date();
+    return deadline < today && task.status !== 'completed';
+  }).length;
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -56,20 +66,13 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center">
-              <CheckCircle className="h-8 w-8 text-indigo-600 mr-3" />
-              <h1 className="text-2xl font-bold text-gray-900">Task Manager</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Task Manager</h1>
             </div>
             
             <div className="flex items-center space-x-4">
-              
               <div className="flex items-center text-sm text-gray-700">
                 <User className="h-4 w-4 mr-2" />
                 <span className="font-medium">{user.email}</span>
-                {!user.emailVerified && (
-                  <span className="ml-2 px-2 py-1 text-xs bg-yellow-100 text-yellow-800 rounded-full">
-                    Unverified
-                  </span>
-                )}
               </div>
               
               <button
@@ -87,11 +90,73 @@ const Dashboard = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          {/* Add Task Form */}
-          <AddTaskForm />
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {/* Total Tasks */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-8 w-8 text-blue-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Total Tasks</p>
+                  <p className="text-2xl font-semibold text-gray-900">{totalTasks}</p>
+                </div>
+              </div>
+            </div>
 
-          {/* Task Table */}
-          <TaskTable />
+            {/* Pending Tasks */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <Clock className="h-8 w-8 text-yellow-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Pending</p>
+                  <p className="text-2xl font-semibold text-gray-900">{pendingTasks}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Completed Tasks */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-2xl font-semibold text-gray-900">{completedTasks}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Overdue Tasks */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-8 w-8 text-red-600" />
+                </div>
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Overdue</p>
+                  <p className="text-2xl font-semibold text-gray-900">{overdueTasks}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Two Column Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Add New Task Panel - Left Side */}
+            <div>
+              <AddTaskForm />
+            </div>
+
+            {/* Task List Panel - Right Side */}
+            <div>
+              <TaskTable />
+            </div>
+          </div>
         </div>
       </main>
     </div>
