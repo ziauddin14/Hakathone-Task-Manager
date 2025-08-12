@@ -20,11 +20,35 @@ const VerifyEmail = () => {
           email: currentUser.email,
           emailVerified: currentUser.emailVerified
         });
+        
+        // If email is verified, automatically redirect to dashboard
+        if (currentUser.emailVerified) {
+          window.location.href = '/dashboard';
+        }
       }
     });
 
     return () => unsubscribe();
   }, [setUser]);
+
+  // Periodic check for email verification status
+  useEffect(() => {
+    if (user && !user.emailVerified) {
+      const interval = setInterval(async () => {
+        try {
+          // Reload the user to check verification status
+          await user.reload();
+          if (user.emailVerified) {
+            window.location.href = '/dashboard';
+          }
+        } catch (error) {
+          console.error('Error checking email verification:', error);
+        }
+      }, 5000); // Check every 5 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   useEffect(() => {
     let timer;

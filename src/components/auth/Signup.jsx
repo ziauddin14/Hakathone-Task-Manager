@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
 import useAuthStore from '../../store/authStore';
 import { Link } from 'react-router-dom';
@@ -48,14 +48,14 @@ const Signup = () => {
       // Send email verification
       await sendEmailVerification(user);
       
-      setUser({
-        uid: user.uid,
-        email: user.email,
-        emailVerified: user.emailVerified
-      });
+      // Sign out the user immediately after signup
+      await auth.signOut();
       
-      // Show success message
+      // Show success message and redirect to verify email
       alert('Account created successfully! Please check your email for verification.');
+      
+      // Redirect to verify email page
+      window.location.href = '/verify-email';
     } catch (error) {
       console.error('Signup error:', error);
       let errorMessage = 'Signup failed. Please try again.';

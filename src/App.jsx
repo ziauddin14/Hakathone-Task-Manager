@@ -12,7 +12,7 @@ import Dashboard from './components/dashboard/Dashboard';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   
   if (isLoading) {
     return (
@@ -22,12 +22,22 @@ const ProtectedRoute = ({ children }) => {
     );
   }
   
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  // Check if user is authenticated and email is verified
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // If user is not verified, redirect to verify email page
+  if (!user.emailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
+  
+  return children;
 };
 
 // Public Route Component (redirects to dashboard if already authenticated)
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuthStore();
+  const { isAuthenticated, isLoading, user } = useAuthStore();
   
   if (isLoading) {
     return (
@@ -37,7 +47,17 @@ const PublicRoute = ({ children }) => {
     );
   }
   
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+  if (isAuthenticated && user) {
+    // If user is verified, redirect to dashboard
+    if (user.emailVerified) {
+      return <Navigate to="/dashboard" replace />;
+    } else {
+      // If user is not verified, redirect to verify email
+      return <Navigate to="/verify-email" replace />;
+    }
+  }
+  
+  return children;
 };
 
 function App() {
